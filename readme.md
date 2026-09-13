@@ -7,7 +7,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/miralexand/oracle-monitor?style=social)](https://github.com/miralexand/oracle-monitor/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/miralexand/oracle-monitor)](https://github.com/miralexand/oracle-monitor/issues)
 [![Last commit](https://img.shields.io/github/last-commit/miralexand/oracle-monitor)](https://github.com/miralexand/oracle-monitor/commits/main)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://github.com/miralexand/oracle-monitor)
 [![Build Windows EXE](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml/badge.svg)](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml)
 
@@ -44,7 +44,7 @@
 2. 通过 SMTP 邮件将告警发送给指定收件人
 3. 恢复正常后也发送"恢复通知"（可选）
 
-程序基于 **Python 3.8+** 编写，依赖极少，可运行于 Windows / Linux / macOS。
+程序基于 **Python 3.9+** 编写（推荐 3.11），依赖较少，可运行于 Windows / Linux / macOS。
 
 ---
 
@@ -92,7 +92,7 @@
 | M8 | RMAN 备份状态 | `v$rman_backup_job_details` | 24 小时内失败即告警 | 备份巡检 |
 | M9 | 告警日志 ORA- 错误 | `alert_<SID>.log` 文件 | 出现 `ORA-00600/ORA-07445` 等即告警 | 捕获严重错误 |
 
-> 默认启用 M1–M6，M7–M9 为可选模块（需在 `config.ini` 中开启）。
+> 默认启用 M2–M6，M7–M9 为可选模块（在 `config.ini` 或 Web「设置 → 监控模块」中开启）。M1 连通性由连接过程自动判定。
 
 ---
 
@@ -101,7 +101,7 @@
 | 项目 | 要求 |
 |------|------|
 | 操作系统 | Windows 10+ / Linux (CentOS 7+ / Ubuntu 18.04+) / macOS 10.15+ |
-| Python | 3.8 及以上 |
+| Python | 3.9 及以上（推荐 3.11） |
 | Oracle | 11g R2 / 12c / 18c / 19c / 21c / 23c |
 | 网络 | 可访问 Oracle 监听端口（默认 1521）与 SMTP 服务器端口 |
 | 权限 | 数据库账号至少具备 `SELECT` on `V_$SESSION`、`V_$INSTANCE`、`DBA_TABLESPACE_USAGE_METRICS` 等视图 |
@@ -113,7 +113,7 @@
 ## 5. 项目结构
 
 ```
-oracle_monitor/
+oracle-monitor/
 ├── config.ini              # 主配置文件（CLI / EXE 方式必填）
 ├── config.sample.ini       # 配置模板（参考用）
 ├── requirements.txt        # Python 依赖
@@ -140,7 +140,7 @@ oracle_monitor/
 ├── state.json              # 告警状态持久化（CLI 模式自动生成）
 ├── logs/                   # 日志目录（自动生成）
 │   └── monitor_20250101.log
-└── README.md               # 本文档
+└── readme.md               # 本文档
 ```
 
 | 运行方式 | 入口 | 配置来源 | 适用场景 |
@@ -156,7 +156,7 @@ oracle_monitor/
 
 ```bash
 git clone https://github.com/miralexand/oracle-monitor.git
-cd oracle_monitor
+cd oracle-monitor
 ```
 
 ### 6.2 创建虚拟环境（推荐）
@@ -183,9 +183,17 @@ pip install -r requirements.txt
 
 ```txt
 oracledb>=2.0.0
+Flask>=3.0.0
+waitress>=3.0.0
+cryptography>=41.0.0
+tzdata>=2024.1
 ```
 
-> `oracledb` 是 `cx_Oracle` 的官方下一代驱动，默认 Thin 模式，**无需安装 Oracle Instant Client**。
+> - `oracledb` 是 `cx_Oracle` 的官方下一代驱动，默认 Thin 模式，连接 **Oracle 12.1+** 无需安装 Instant Client；
+>   连接 11g 等旧库需 Thick 模式（Docker 镜像已内置客户端）。
+> - `Flask` + `waitress` 用于 Web 管理面板；`cryptography` 用于敏感字段加密与 Thin 模式；
+>   `tzdata` 提供时区数据（NTP/时区功能）。
+> - 仅使用 CLI / EXE（`monitor.py`）时，也可只安装 `oracledb` 与 `tzdata`。
 
 ### 6.4 准备配置
 
@@ -204,11 +212,10 @@ python monitor.py --once
 若配置正确，控制台会输出：
 
 ```
-2025-01-01 10:00:00 [INFO] 加载配置成功
-2025-01-01 10:00:00 [INFO] 数据库连接成功: ORCL
-2025-01-01 10:00:00 [INFO] M1 连通性检查通过
-2025-01-01 10:00:00 [INFO] M3 表空间使用率检查通过
-2025-01-01 10:00:00 [INFO] 所有检查通过，无告警
+2025-01-01 10:00:00.123 [INFO] 加载配置成功: config.ini
+2025-01-01 10:00:00.456 [INFO] 开始执行数据库检查: ORCL (192.168.1.100:1521)
+2025-01-01 10:00:00.789 [INFO] 数据库连接成功: ORCL
+2025-01-01 10:00:01.012 [INFO] 所有检查通过，无告警
 ```
 
 ### 6.6 启动持续监控
@@ -272,8 +279,7 @@ archive_usage_pct = 85
 rman_backup_interval_hours = 24
 
 [modules]
-# 是否启用各监控项，true / false
-enable_m1_connectivity = true
+# 是否启用各监控项，true / false（M1 连通性由连接过程自动判定，无独立开关）
 enable_m2_instance_status = true
 enable_m3_tablespace = true
 enable_m4_session_count = true
@@ -400,22 +406,27 @@ sudo systemctl status oracle-monitor
 ### 9.1 日志位置
 
 ```
+# CLI / EXE
 logs/monitor_20250101.log
 logs/monitor_20250102.log
-...
+
+# Docker / Web
+/data/logs/monitor_20250101.log
 ```
 
-按天自动切分，超过 `retention_days` 天的日志自动删除。
+按天自动切分，超过 `retention_days` 天的日志自动删除。Web 版可在「日志」页面在线筛选、查看与导出。
 
 ### 9.2 日志格式
 
+时间精确到**毫秒**，并按所选时区显示（见 [13.5 时间同步](#135-时间同步ntp-校时)）：
+
 ```
-2025-01-01 10:00:00 [INFO] 加载配置成功
-2025-01-01 10:00:00 [INFO] 数据库连接成功: ORCL
-2025-01-01 10:00:00 [WARNING] 表空间 USERS 使用率 88.3%，超过阈值 85%
-2025-01-01 10:00:00 [INFO] 已发送告警邮件，共 1 条告警
-2025-01-01 10:05:00 [INFO] 所有检查通过，无告警
-2025-01-01 10:05:00 [INFO] 告警已恢复: 表空间 USERS
+2025-01-01 10:00:00.123 [INFO] 加载配置成功
+2025-01-01 10:00:00.456 [INFO] 数据库连接成功: ORCL
+2025-01-01 10:00:00.789 [WARNING] 表空间 USERS 使用率 88.3%，超过阈值 85%
+2025-01-01 10:00:01.012 [INFO] 已发送告警邮件，共 1 条告警
+2025-01-01 10:05:00.345 [INFO] 所有检查通过，无告警
+2025-01-01 10:05:00.678 [INFO] 告警已恢复: 表空间 USERS
 ```
 
 ### 9.3 日志级别
@@ -451,43 +462,41 @@ logs/monitor_20250102.log
 
 ## 11. 如何新增监控项
 
-以"新增 **表锁数量** 监控"为例：
+以"新增 **表锁数量** 监控（M10）"为例：
 
-**Step 1** 在 `checks.py` 中新增函数：
+**Step 1** 在 `checks.py` 中新增检测函数。约定：返回 `(key, message)` 列表；
+`key` 为稳定标识（用于静默/恢复/忽略判断），`message` 为人类可读描述，无异常时返回空列表：
 
 ```python
 def check_table_locks(conn, threshold):
-    """检查表级锁数量"""
+    """检查表级锁数量，返回 [(key, message), ...]"""
+    alerts = []
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*) FROM v$lock WHERE type = 'TM'
-    """)
-    count = cursor.fetchone()[0]
+    try:
+        cursor.execute("SELECT COUNT(*) FROM v$lock WHERE type = 'TM'")
+        count = int(cursor.fetchone()[0])
+    finally:
+        cursor.close()
     if count > threshold:
-        return f"表级锁数量 {count}，超过阈值 {threshold}"
-    return None
+        alerts.append(("table_locks", f"表级锁数量 {count}，超过阈值 {threshold}"))
+    return alerts
 ```
 
-**Step 2** 在 `config.ini` 中添加阈值：
-
-```ini
-[thresholds]
-table_lock_count = 100
-
-[modules]
-enable_table_locks = true
-```
-
-**Step 3** 在 `monitor.py` 的 `run_checks()` 中调用：
+**Step 2** 在 `checks.py` 的 `run_checks()` 中注册（沿用 `_selected` / `_enabled` / `_threshold` 辅助函数）：
 
 ```python
-if config['modules'].getboolean('enable_table_locks'):
-    msg = check_table_locks(conn, int(config['thresholds']['table_lock_count']))
-    if msg:
-        alerts.append(msg)
+if _selected(selected, "M10") and _enabled(config, "enable_table_locks", False):
+    alerts += _run("M10", check_table_locks, conn, _threshold(config, "table_lock_count", 100))
 ```
 
-**Step 4** 在 `README.md` 的监控项表格中登记。
+**Step 3** 增加配置项：
+
+- **Web / Docker**：在 `settings.py` 的 `DEFAULT_SETTINGS` 增加
+  `"table_lock_count": "100"`、`"enable_table_locks": "false"`，并加入
+  `webapp.py` 的 `EDITABLE_SETTING_KEYS` / `BOOLEAN_FORM_KEYS`，即可在设置页配置。
+- **CLI / EXE**：在 `config.sample.ini` 的 `[thresholds]` / `[modules]` 增加对应项。
+
+**Step 4** 在本文档第 3 节「监控项说明」表格中登记。
 
 ---
 
@@ -550,14 +559,17 @@ ALTER USER monitor_user ACCOUNT UNLOCK;
 
 ### Q8: 支持多个数据库同时监控吗？
 
-**解决**：目前单实例。可复制一份目录，改 `config.ini` 与日志目录，分别运行。或改造 `monitor.py` 支持 `[oracle1]`、`[oracle2]` 多段配置。
+**解决**：**Web / Docker 版原生支持**，在「数据库管理」中添加任意多个实例即可统一监控。
+CLI / EXE 版为单实例（`config.ini`）；如需多实例，可复制多份目录并分别运行，或改用 Web 版。
 
-### Q9: 数据库密码明文存放不安全？
+### Q9: 数据库密码会不会明文存放？
 
 **解决**：
-- 使用只读账号
-- 限制 `config.ini` 文件权限（`chmod 600`）
-- 进阶方案：接入 HashiCorp Vault、KMS，或使用 `keyring` 库管理密码
+- **Web / Docker 版**：数据库账号/密码与 SMTP 授权码在 SQLite 中以
+  `Fernet`（AES-128-CBC + HMAC）**密文存储，不再明文落盘**；密钥见 `data.key` / `OM_DATA_KEY`。
+  详见 [14. 敏感数据与安全](#14-敏感数据与安全)。
+- **CLI / EXE 版**：`config.ini` 为明文，请用 `chmod 600` 保护并勿提交 Git；如需加密，建议改用 Web 版。
+- 通用建议：使用只读账号；更强隔离可接入 HashiCorp Vault / KMS。
 
 ### Q10: 程序占用内存过高？
 
@@ -584,8 +596,12 @@ pip install -r requirements.txt pyinstaller
 pyinstaller --clean --noconfirm oracle_monitor.spec
 ```
 
-> `oracle_monitor.spec` 已通过 `collect_all` 打入 `oracledb`、`cryptography`、`cffi`
-> （`python-oracledb` 的 Thin 模式依赖 `cryptography`，缺省不会自动收集）。
+> `oracle_monitor.spec` 已通过 `collect_all` 打入 `oracledb`、`cryptography`、`cffi`、`tzdata`
+> （`python-oracledb` 的 Thin 模式依赖 `cryptography`，时区功能依赖 `tzdata`，缺省不会自动收集）。
+
+**自动构建与发布**：仓库内置 GitHub Actions 工作流
+`.github/workflows/build-release.yml`，推送 `v*` 标签会**自动构建 EXE 并发布到 GitHub Release**
+（附带 `oracle_monitor.exe` 与 `.sha256`）；也可在 Actions 页面手动触发。
 
 **分发与首次运行**：只需把单个 `dist\oracle_monitor.exe` 拷贝给用户。
 首次运行会在 exe 同目录生成 `config.ini`，编辑后再次运行即可；日志 `logs\`
@@ -593,9 +609,15 @@ pyinstaller --clean --noconfirm oracle_monitor.spec
 
 ### 13.2 打包为 Linux 可执行文件
 
+在 Linux 上同样使用项目内置的 spec（会自动收集依赖与时区数据）：
+
 ```bash
-pyinstaller --onefile --name oracle_monitor monitor.py
+pip install -r requirements.txt pyinstaller
+pyinstaller --clean --noconfirm oracle_monitor.spec
+# 产物：dist/oracle_monitor
 ```
+
+> `/opt/oracle/instantclient` 等 Thick 模式客户端需在目标机器自行安装（见 [第 12 节](#12-常见问题-faq)）。
 
 ### 13.3 Docker 部署（Web 管理面板，推荐）
 
@@ -639,19 +661,6 @@ docker run -d --name oracle-monitor -p 5432:8080 \
 > 首次启动可用环境变量 `OM_ADMIN_USER` / `OM_ADMIN_PASSWORD` 指定管理员账号，
 > 登录后请在「修改密码」中尽快更改默认口令。
 
-### 13.4 配置备份与恢复
-
-进入「备份」页面：
-
-- **导出**：设置一个备份密码后点击「下载加密备份」，得到
-  `oracle-monitor-backup-YYYYmmdd-HHMMSS.json.enc`。该文件包含全部数据库
-  （含账号密码）、SMTP、阈值、检测间隔等设置，整个负载使用备份密码派生密钥加密。
-- **恢复**：选择备份文件、输入相同密码并勾选确认，即可覆盖恢复全部配置。
-
-加密说明：使用 `PBKDF2-HMAC-SHA256`（20 万次迭代，随机盐）派生密钥，
-再用 `Fernet`（AES-128-CBC + HMAC-SHA256）加密负载，密码本身不落盘。
-**忘记备份密码将无法恢复**，请妥善保管。
-
 启用 Thick 模式：进入「设置 → 调度与连接」，勾选「使用 Oracle Thick 模式」，
 「Instant Client 目录」填 `/opt/oracle/instantclient`，保存后**重启容器**生效：
 
@@ -667,7 +676,7 @@ docker compose restart
 Web 版目录结构：
 
 ```text
-oracle_monitor/
+oracle-monitor/
 ├── webapp.py            # Flask 路由与 API
 ├── run_web.py           # Web 入口（waitress）
 ├── auth.py              # 登录认证与口令哈希
@@ -687,6 +696,19 @@ oracle_monitor/
 ├── docker-compose.yml
 └── data/                # 持久化数据（自动生成）
 ```
+
+### 13.4 配置备份与恢复
+
+进入「备份」页面：
+
+- **导出**：设置一个备份密码后点击「下载加密备份」，得到
+  `oracle-monitor-backup-YYYYmmdd-HHMMSS.json.enc`。该文件包含全部数据库
+  （含账号密码）、SMTP、阈值、检测间隔等设置，整个负载使用备份密码派生密钥加密。
+- **恢复**：选择备份文件、输入相同密码并勾选确认，即可覆盖恢复全部配置。
+
+加密说明：使用 `PBKDF2-HMAC-SHA256`（20 万次迭代，随机盐）派生密钥，
+再用 `Fernet`（AES-128-CBC + HMAC-SHA256）加密负载，密码本身不落盘。
+**忘记备份密码将无法恢复**，请妥善保管。
 
 ### 13.5 时间同步（NTP 校时）
 
@@ -842,11 +864,14 @@ __pycache__/
 *.pyc
 config.ini
 .env
+opencode.json
 logs/
 data/
+*.log
 state.json
 dist/
 build/
+.idea/
 ```
 
 ---
@@ -922,9 +947,9 @@ See the Mulan PubL v2 for more details.
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
-| v1.0.0 | 2025-01-01 | 首个正式版本，支持 M1–M6 监控项 |
+| v1.0.0 | 2025-01-01 | 首个版本：CLI 监控 M1–M6、SMTP 告警、按天日志 |
 | v1.1.0 | 2025-02-01 | 新增 M7–M9 监控项、恢复通知、静默期 |
-| v1.2.0 | 2025-03-01 | 支持 Docker 部署、多收件人 |
+| v1.2.0 | 2025-03-01 | Web 管理面板 / Docker、多数据库、登录与用户管理、图表看板、日志筛选、加密备份/恢复、告警忽略、NTP 校时与时间地区、敏感数据加密 |
 
 ---
 
