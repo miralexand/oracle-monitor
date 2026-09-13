@@ -31,7 +31,7 @@ from timesync import time_sync
 
 log = logging.getLogger(__name__)
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 SERVICE_STARTED = time.time()
 
 EDITABLE_SETTING_KEYS = [

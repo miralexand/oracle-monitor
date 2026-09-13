@@ -18,7 +18,7 @@ from checks import run_checks
 from logger import setup_logging
 from mailer import Mailer
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 APP_NAME = "oracle_monitor"
 
 
