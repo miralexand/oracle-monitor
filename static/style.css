@@ -308,6 +308,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 24px; }
 }
 .db-metrics div { font-size: 11px; color: var(--muted); }
 .db-metrics b { display: block; font-size: 15px; color: var(--text); margin-top: 2px; }
+.db-metrics b.err { color: var(--error); }
+.db-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
 .chart-block { margin-top: 12px; }
 .block-title {

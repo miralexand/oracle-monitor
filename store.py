@@ -591,6 +591,8 @@ class Store(object):
             "active_alerts": sum(d["active_alerts"] for d in data),
             "ignored_alerts": sum(d.get("ignored_alerts", 0) for d in data),
             "checks_24h": total_checks,
+            "alerts_24h": sum(d["alert_24h"] for d in data),
+            "connect_failures_24h": sum(d["error_24h"] for d in data),
             "incidents_24h": sum(d["alert_24h"] + d["error_24h"] for d in data),
             "overall_uptime": round(healthy / total_checks * 100, 1) if total_checks else None,
         }

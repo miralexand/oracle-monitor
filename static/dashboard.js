@@ -8,6 +8,7 @@
     ok: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
     alert: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 9v5"/><path d="M12 17h.01"/></svg>',
     error: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+    connect: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h3"/><path d="M15 7h2a5 5 0 010 10h-3"/><path d="M3 3l18 18"/></svg>',
     active: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 003 0"/></svg>'
   };
 
@@ -105,7 +106,8 @@
         '<div class="hero-meta">' +
           '<span>服务已运行 <b>' + C.esc(formatUptime(uptimeSeconds)) + "</b></span>" +
           "<span>24h 检测 <b>" + (summary.checks_24h || 0) + "</b> 次</span>" +
-          "<span>24h 异常 <b>" + (summary.incidents_24h || 0) + "</b> 次</span>" +
+          "<span>24h 连接失败 <b>" + (summary.connect_failures_24h || 0) + "</b> 次</span>" +
+          "<span>24h 告警 <b>" + (summary.alerts_24h || 0) + "</b> 次</span>" +
           (ignored ? "<span>已忽略 <b>" + ignored + "</b> 项</span>" : "") +
           '<span class="ts ' + tsCls + '" title="' +
             C.esc((timeSync && timeSync.server) || "") +
@@ -124,7 +126,8 @@
       { key: "total", label: "数据库总数", value: summary.total, cls: "" },
       { key: "ok", label: "正常运行", value: summary.ok, cls: "ok" },
       { key: "alert", label: "存在告警", value: summary.alert, cls: "alert" },
-      { key: "error", label: "连接失败", value: summary.error, cls: "error" },
+      { key: "error", label: "连接失败", value: summary.error, cls: summary.error ? "error" : "" },
+      { key: "connect", label: "24h 连接异常", value: summary.connect_failures_24h || 0, cls: summary.connect_failures_24h ? "error" : "" },
       { key: "active", label: "活动告警", value: summary.active_alerts, cls: summary.active_alerts ? "alert" : "" }
     ];
     var prev = state.prevSummary;
@@ -207,11 +210,19 @@
         "</div>";
     }
 
+    var anomaly = "";
+    if (db.run_status === "error" && status !== "error") {
+      anomaly = '<span class="badge error" title="最近一次检测无法连接数据库（告警已忽略）"><i class="dot"></i>连接异常</span>';
+    }
+
     return '<article class="db-card ' + C.esc(status) + ' fade-up" style="animation-delay:' + (index * 80) + 'ms">' +
       '<div class="db-head">' +
         "<div><div class=\"db-name\">" + C.esc(db.name) + "</div>" +
         '<div class="db-conn">' + conn + (db.enabled ? "" : " · 已停用") + "</div></div>" +
-        '<span class="badge ' + C.esc(status) + '"><i class="dot"></i>' + statusShort(status) + "</span>" +
+        '<div class="db-badges">' +
+          '<span class="badge ' + C.esc(status) + '"><i class="dot"></i>' + statusShort(status) + "</span>" +
+          anomaly +
+        "</div>" +
       "</div>" +
       '<p class="db-summary">' + plainSummary(db) + "</p>" +
       '<div class="db-main">' +
@@ -219,10 +230,10 @@
         '<div class="db-metrics">' +
           "<div>24h 检测次数<b>" + db.checks_24h + "</b></div>" +
           "<div>24h 告警次数<b>" + db.alert_24h + "</b></div>" +
+          '<div>24h 连接失败<b' + (db.error_24h ? ' class="err"' : "") + ">" + db.error_24h + "</b></div>" +
           "<div>活动告警<b>" + db.active_alerts + "</b></div>" +
           "<div>平均检测耗时<b>" + avg + "</b></div>" +
           '<div>最近检测时间<b title="' + C.esc(fmtTime(db.latest_time)) + '">' + C.esc(timeAgo(db.latest_time)) + "</b></div>" +
-          "<div>连接地址<b>" + C.esc(db.host) + "</b></div>" +
         "</div>" +
       "</div>" +
       '<div class="chart-block"><div class="block-title"><span>响应时间（24 小时）</span><span>毫秒</span></div>' +
