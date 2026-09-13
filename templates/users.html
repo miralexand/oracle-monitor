@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}用户管理{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>用户管理</h1>
+    <p class="subtitle">管理员可查看监控、修改配置；只读用户仅能查看面板与日志</p>
+  </div>
+</div>
+
+<section class="panel">
+  <h2>新增用户</h2>
+  <form class="js-hash" method="post" action="{{ url_for('users_add') }}">
+    <div class="form-grid">
+      <label class="field"><span>用户名 *</span>
+        <input type="text" name="username" required autocomplete="off">
+      </label>
+      <label class="field"><span>密码 *（至少 4 位）</span>
+        <input type="password" name="password" required minlength="4" data-hash="1" autocomplete="new-password">
+      </label>
+      <label class="field"><span>角色</span>
+        <select name="role">
+          <option value="viewer">只读用户</option>
+          <option value="admin">管理员</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary">创建用户</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>用户列表（{{ users|length }}）</h2>
+  <table class="table">
+    <thead>
+      <tr><th>用户名</th><th>角色</th><th>创建时间</th><th>最近登录</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}{% if current_user and u.id == current_user.id %} <span class="badge muted">当前</span>{% endif %}</td>
+        <td>
+          <form class="inline" method="post" action="{{ url_for('users_role', user_id=u.id) }}">
+            <select name="role" onchange="this.form.submit()">
+              <option value="viewer" {% if u.role == 'viewer' %}selected{% endif %}>只读用户</option>
+              <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>管理员</option>
+            </select>
+          </form>
+        </td>
+        <td class="muted">{{ u.created_at | dt }}</td>
+        <td class="muted">{{ (u.last_login | dt) if u.last_login else '从未' }}</td>
+        <td class="row-actions">
+          <form class="js-hash inline" method="post" action="{{ url_for('users_password', user_id=u.id) }}">
+            <input type="password" name="password" placeholder="重置密码" required minlength="4" data-hash="1"
+                   autocomplete="new-password" class="mini-input">
+            <button type="submit" class="btn small">重置</button>
+          </form>
+          <form class="inline" method="post" action="{{ url_for('users_delete', user_id=u.id) }}">
+            <button type="submit" class="btn small danger"
+                    data-confirm="确认删除用户 {{ u.username }}？">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

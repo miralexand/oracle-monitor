@@ -1,0 +1,27 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# 敏感 / 本地配置（切勿提交）
+config.ini
+.env
+opencode.json
+
+# 运行期数据（含加密后的凭据、检测历史、日志）
+data/
+logs/
+*.log
+state.json
+
+# 构建产物
+dist/
+build/
+
+# IDE / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

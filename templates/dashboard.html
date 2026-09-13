@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}监控面板{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>监控面板</h1>
+    <p class="subtitle" id="page-subtitle">正在加载数据…</p>
+  </div>
+  <div class="actions">
+    <span id="server-time" class="muted"></span>
+    <button id="run-now" class="btn">立即检测</button>
+    <button id="refresh-btn" class="btn">刷新</button>
+  </div>
+</div>
+
+<section id="hero"></section>
+
+<section class="cards" id="summary">
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>整体趋势</h2>
+    <div class="tabs" id="trend-tabs">
+      <button class="tab active" data-range="24h">24 小时异常</button>
+      <button class="tab" data-range="7d">7 天告警</button>
+    </div>
+  </div>
+  <div id="overall-chart" class="chart-wrap"></div>
+</section>
+
+<section>
+  <div class="section-head"><h2>数据库状态</h2></div>
+  <div id="db-list" class="db-grid">
+    <div class="skeleton" style="height:280px"></div>
+    <div class="skeleton" style="height:280px"></div>
+  </div>
+  <p id="empty-hint" class="muted" style="display:none">
+    还没有配置数据库，前往 <a href="{{ url_for('databases_page') }}">数据库管理</a> 添加。
+  </p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>window.PAGE = 'dashboard'; window.IS_ADMIN = {{ 'true' if is_admin else 'false' }};</script>
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}

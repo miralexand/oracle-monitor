@@ -1,0 +1,42 @@
+services:
+  oracle-monitor:
+    build:
+      context: .
+    image: oracle-monitor:latest
+    container_name: oracle-monitor
+    ports:
+      # 宿主机端口默认 5432，可在 .env 或环境变量 OM_WEB_PORT 覆盖
+      - "${OM_WEB_PORT:-5432}:8080"
+    environment:
+      OM_DATA_DIR: /data
+      OM_LOG_DIR: /data/logs
+      ORACLE_CLIENT_LIB_DIR: /opt/oracle/instantclient
+      # 默认启用 Thick 模式（镜像已内置 Instant Client，兼容 11g 等旧库）
+      ORACLE_USE_THICK: "true"
+      OM_HOST: 0.0.0.0
+      OM_PORT: "8080"
+      # 首次启动创建的管理员账号（不设置则默认 admin / admin123）
+      # OM_ADMIN_USER: admin
+      # OM_ADMIN_PASSWORD: admin123
+      # 敏感字段加密密钥（不设置则自动生成 /data/data.key；设置后密钥不落盘）
+      # 生成: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # OM_DATA_KEY: ""
+    volumes:
+      # 使用 Docker 命名卷存 SQLite/日志。
+      # 注意：Windows 绑定挂载（如 ./data:/data）会导致 SQLite "disk I/O error"，
+      # 因此默认使用命名卷；如需查看宿主机文件，请通过 Web 的「日志」页面。
+      - oracle-monitor-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  oracle-monitor-data:

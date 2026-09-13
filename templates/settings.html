@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}设置{% endblock %}
+
+{% macro text(label, name, value, type='text', help='') %}
+<label class="field">
+  <span>{{ label }}</span>
+  <input type="{{ type }}" name="{{ name }}" value="{{ value if value is not none else '' }}">
+  {% if help %}<small>{{ help }}</small>{% endif %}
+</label>
+{% endmacro %}
+
+{% macro check(label, name, value) %}
+<label class="field checkbox">
+  <span>{{ label }}</span>
+  <input type="checkbox" name="{{ name }}" {% if value == 'true' %}checked{% endif %}>
+</label>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>设置</h1>
+  <button id="run-now" class="btn">立即检测</button>
+</div>
+
+<form method="post">
+  <section class="panel">
+    <h2>调度与连接</h2>
+    <div class="form-grid">
+      {{ text('检测间隔（分钟）', 'interval_minutes', settings.interval_minutes, 'number') }}
+      {{ text('告警静默期（分钟）', 'silence_minutes', settings.silence_minutes, 'number') }}
+      {{ check('告警恢复后发送通知', 'notify_on_recovery', settings.notify_on_recovery) }}
+      {{ check('使用 Oracle Thick 模式（连接旧版本数据库）', 'oracle_use_thick', settings.oracle_use_thick) }}
+      {{ text('Instant Client 目录', 'oracle_client_lib_dir', settings.oracle_client_lib_dir, 'text', 'Docker 镜像内为 /opt/oracle/instantclient；切换连接模式后需重启服务') }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>时间同步（NTP）</h2>
+    <p class="muted" style="font-size:12px;margin:0 0 12px">
+      启用后启动时自动校准，并每隔设定小时数再次校准。时间以软件偏移方式作用于日志与界面显示，
+      不会修改宿主机系统时钟（容器内无需特权）。
+    </p>
+    <div class="form-grid">
+      {{ check('启用 NTP 校时', 'ntp_enabled', settings.ntp_enabled) }}
+      {{ text('NTP 服务器', 'ntp_server', settings.ntp_server, 'text', '如 pool.ntp.org / ntp.aliyun.com，可写 host:port') }}
+      {{ text('校准间隔（小时）', 'ntp_interval_hours', settings.ntp_interval_hours, 'number') }}
+      {% set tz_options = ['Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Taipei', 'Asia/Tokyo', 'Asia/Seoul', 'Asia/Singapore', 'Asia/Kolkata', 'Asia/Dubai', 'UTC', 'Europe/London', 'Europe/Paris', 'Europe/Moscow', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Australia/Sydney'] %}
+      <label class="field"><span>时间地区（时区）</span>
+        <select name="timezone">
+          {% for tz in tz_options %}
+          <option value="{{ tz }}" {% if settings.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+          {% endfor %}
+          {% if settings.timezone not in tz_options %}
+          <option value="{{ settings.timezone }}" selected>{{ settings.timezone }}</option>
+          {% endif %}
+        </select>
+        <small>日志与面板时间按此时区显示，默认 Asia/Shanghai</small>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="button" id="ntp-sync" class="btn">立即校准</button>
+      <span id="ntp-result" class="test-result"></span>
+      <span class="muted" style="font-size:12px">
+        {% if time_sync.enabled %}
+          上次校准：{{ time_sync.last_sync or '尚未' }} · 偏移 {{ time_sync.offset_seconds }} 秒
+          {% if time_sync.last_error %}· 最近错误：{{ time_sync.last_error }}{% endif %}
+        {% else %}NTP 未启用{% endif %}
+      </span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>SMTP 邮件</h2>
+    <div class="form-grid">
+      {{ text('SMTP 服务器', 'smtp_server', settings.smtp_server) }}
+      {{ text('端口', 'smtp_port', settings.smtp_port, 'number') }}
+      <label class="field"><span>加密方式</span>
+        <select name="smtp_encryption">
+          {% for opt in ['ssl', 'tls', 'none'] %}
+          <option value="{{ opt }}" {% if settings.smtp_encryption == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {{ text('发件人邮箱', 'smtp_sender', settings.smtp_sender) }}
+      {{ text('发件授权码', 'smtp_password', '', 'password', '留空表示不修改') }}
+      {{ text('收件人（逗号分隔）', 'smtp_receivers', settings.smtp_receivers) }}
+      {{ text('主题前缀', 'smtp_subject_prefix', settings.smtp_subject_prefix) }}
+    </div>
+    <div class="form-actions">
+      <button type="button" id="test-mail" class="btn">发送测试邮件</button>
+      <span id="mail-result" class="test-result"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>阈值</h2>
+    <div class="form-grid">
+      {{ text('表空间使用率 %', 'tablespace_usage_pct', settings.tablespace_usage_pct, 'number') }}
+      {{ text('活跃会话数', 'session_count', settings.session_count, 'number') }}
+      {{ text('长事务秒数', 'long_query_seconds', settings.long_query_seconds, 'number') }}
+      {{ text('锁等待秒数', 'lock_wait_seconds', settings.lock_wait_seconds, 'number') }}
+      {{ text('归档目录使用率 %', 'archive_usage_pct', settings.archive_usage_pct, 'number') }}
+      {{ text('RMAN 备份间隔（小时）', 'rman_backup_interval_hours', settings.rman_backup_interval_hours, 'number') }}
+      {{ text('告警日志关注关键字', 'alert_log_patterns', settings.alert_log_patterns, 'text', '逗号分隔') }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>监控模块</h2>
+    <div class="form-grid">
+      {{ check('M2 实例状态', 'enable_m2_instance_status', settings.enable_m2_instance_status) }}
+      {{ check('M3 表空间使用率', 'enable_m3_tablespace', settings.enable_m3_tablespace) }}
+      {{ check('M4 活跃会话数', 'enable_m4_session_count', settings.enable_m4_session_count) }}
+      {{ check('M5 长时间运行 SQL', 'enable_m5_long_query', settings.enable_m5_long_query) }}
+      {{ check('M6 阻塞锁等待', 'enable_m6_lock_wait', settings.enable_m6_lock_wait) }}
+      {{ check('M7 归档目录空间', 'enable_m7_archive_space', settings.enable_m7_archive_space) }}
+      {{ check('M8 RMAN 备份状态', 'enable_m8_rman_backup', settings.enable_m8_rman_backup) }}
+      {{ check('M9 告警日志 ORA- 错误', 'enable_m9_alert_log', settings.enable_m9_alert_log) }}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>日志</h2>
+    <div class="form-grid">
+      <label class="field"><span>级别</span>
+        <select name="log_level">
+          {% for opt in ['DEBUG', 'INFO', 'WARNING', 'ERROR'] %}
+          <option value="{{ opt }}" {% if settings.log_level == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {{ text('保留天数（0 不清理）', 'log_retention_days', settings.log_retention_days, 'number') }}
+    </div>
+  </section>
+
+  <div class="form-actions sticky">
+    <button type="submit" class="btn primary">保存设置</button>
+  </div>
+</form>
+{% endblock %}

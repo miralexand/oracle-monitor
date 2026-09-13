@@ -1,0 +1,15 @@
+.venv/
+venv/
+data/
+logs/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+.idea/
+.vscode/
+*.spec
+build_exe.bat

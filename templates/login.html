@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("om-theme");
+      if (!t) {
+        t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  })();
+</script>
+<title>登录 · Oracle 监控</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+<div class="login-wrap">
+  <form class="login-card" method="post" id="login-form">
+    <div class="login-brand"><span class="brand-dot"></span>Oracle 数据库监控</div>
+    <h1>登录</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="password_hash" id="password_hash">
+    <label class="field"><span>用户名</span>
+      <input type="text" name="username" required autofocus autocomplete="username">
+    </label>
+    <label class="field"><span>密码</span>
+      <input type="password" name="password" id="password" required autocomplete="current-password">
+    </label>
+    <button type="submit" class="btn primary block">登 录</button>
+    <p class="login-hint muted">默认账号 admin / admin123，登录后请尽快修改密码</p>
+  </form>
+</div>
+<script src="{{ url_for('static', filename='sha256.js') }}"></script>
+<script>
+  document.getElementById("login-form").addEventListener("submit", function () {
+    var pw = document.getElementById("password");
+    if (pw.value && window.sha256Hex) {
+      document.getElementById("password_hash").value = window.sha256Hex(pw.value);
+      pw.value = "";
+    }
+  });
+</script>
+</body>
+</html>

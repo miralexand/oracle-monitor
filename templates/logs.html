@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}日志{% endblock %}
+{% set level_cls = {'DEBUG': 'muted', 'INFO': 'ok', 'WARNING': 'alert', 'ERROR': 'error'} %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>日志</h1>
+    <p class="subtitle">按状态级别、数据库、关键字细分查看，并可导出当前筛选结果</p>
+  </div>
+</div>
+
+<section class="panel">
+  <form method="get">
+    <div class="form-grid">
+      <label class="field"><span>日志文件</span>
+        <select name="file">
+          <option value="{{ all_files }}" {% if selected == all_files %}selected{% endif %}>全部日期</option>
+          {% for f in files %}
+          <option value="{{ f.name }}" {% if selected == f.name %}selected{% endif %}>
+            {{ f.name }}（{{ (f.size / 1024) | round(1) }} KB）
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>数据库</span>
+        <select name="db">
+          <option value="">全部数据库</option>
+          {% for name in databases %}
+          <option value="{{ name }}" {% if filters.db == name %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>关键字</span>
+        <input type="text" name="q" value="{{ filters.keyword }}" placeholder="搜索日志内容">
+      </label>
+      <div class="field">
+        <span>状态级别</span>
+        <div class="level-checks">
+          {% for level in all_levels %}
+          <label class="chip">
+            <input type="checkbox" name="levels" value="{{ level }}"
+                   {% if level in filters.levels %}checked{% endif %}>
+            {{ level }} ({{ counts[level] }})
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary" formaction="{{ url_for('logs_page') }}">筛选</button>
+      <button type="submit" class="btn" formaction="{{ url_for('logs_export') }}">导出筛选结果</button>
+    </div>
+  </form>
+</section>
+
+<section class="cards">
+  {% for level in all_levels %}
+  <div class="stat-card {{ level_cls[level] }}">
+    <div class="num">{{ counts[level] }}</div>
+    <div class="label">{{ level }}</div>
+  </div>
+  {% endfor %}
+  <div class="stat-card accent">
+    <div class="num">{{ total }}</div>
+    <div class="label">筛选结果</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>日志内容（匹配 {{ total }} 条，显示末 1000 条）</h2>
+    <span class="muted" style="font-size:12px">来源：{{ '全部日期' if selected == all_files else selected }}</span>
+  </div>
+  <div class="log-entries">
+    {% for e in entries %}
+    <div class="log-entry">
+      <span class="log-time">{{ e.time }}</span>
+      <span class="badge {{ level_cls[e.level] }}">{{ e.level }}</span>
+      <span class="log-msg">{{ e.message }}{% for extra in e.extra %}<br>{{ extra }}{% endfor %}</span>
+    </div>
+    {% else %}
+    <p class="muted">没有符合条件的日志</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

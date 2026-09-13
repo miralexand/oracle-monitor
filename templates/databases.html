@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}数据库管理{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>数据库管理</h1>
+  <button id="run-now" class="btn">立即检测</button>
+</div>
+
+<section class="panel">
+  <h2>{{ '编辑数据库' if editing else '新增数据库' }}</h2>
+  <form id="db-form" method="post"
+        action="{{ url_for('database_edit', db_id=editing.id) if editing else url_for('database_add') }}">
+    <div class="form-grid">
+      <label class="field"><span>名称 *</span>
+        <input type="text" name="name" required value="{{ editing.name if editing else '' }}">
+      </label>
+      <label class="field"><span>主机 *</span>
+        <input type="text" name="host" required value="{{ editing.host if editing else '' }}">
+      </label>
+      <label class="field"><span>端口</span>
+        <input type="number" name="port" value="{{ editing.port if editing else 1521 }}">
+      </label>
+      <label class="field"><span>Service Name</span>
+        <input type="text" name="service_name" value="{{ editing.service_name if editing else '' }}">
+      </label>
+      <label class="field"><span>SID（与 Service Name 二选一）</span>
+        <input type="text" name="sid" value="{{ editing.sid if editing else '' }}">
+      </label>
+      <label class="field"><span>用户名 *</span>
+        <input type="text" name="username" required value="{{ editing.username if editing else '' }}">
+      </label>
+      <label class="field"><span>密码</span>
+        <input type="password" name="password" value=""
+               placeholder="{{ '留空表示不修改' if editing else '' }}">
+      </label>
+      <label class="field"><span>连接超时（秒）</span>
+        <input type="number" name="connect_timeout" value="{{ editing.connect_timeout if editing else 10 }}">
+      </label>
+      <label class="field checkbox"><span>启用</span>
+        <input type="checkbox" name="enabled" {% if not editing or editing.enabled %}checked{% endif %}>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary">{{ '保存修改' if editing else '添加' }}</button>
+      <button type="button" id="test-inline" class="btn">测试连接</button>
+      {% if editing %}
+      <a class="btn" href="{{ url_for('databases_page') }}">取消</a>
+      {% endif %}
+      <span id="test-result" class="test-result"></span>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>已配置数据库（{{ databases|length }}）</h2>
+  <table class="table">
+    <thead>
+      <tr><th>名称</th><th>连接</th><th>用户</th><th>状态</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for db in databases %}
+      <tr>
+        <td>{{ db.name }}</td>
+        <td>{{ db.host }}:{{ db.port }}/{{ db.service_name or db.sid }}</td>
+        <td>{{ db.username }}</td>
+        <td>
+          {% if db.enabled %}
+            <span class="badge ok">启用</span>
+          {% else %}
+            <span class="badge muted">停用</span>
+          {% endif %}
+        </td>
+        <td class="row-actions">
+          <a class="btn small" href="{{ url_for('databases_page', edit=db.id) }}">编辑</a>
+          <button class="btn small test-db" data-id="{{ db.id }}">测试</button>
+          <form method="post" action="{{ url_for('database_toggle', db_id=db.id) }}" class="inline">
+            <button class="btn small" type="submit">{{ '停用' if db.enabled else '启用' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('database_delete', db_id=db.id) }}" class="inline"
+                onsubmit="return confirm('确认删除 {{ db.name }} 及其历史数据？');">
+            <button class="btn small danger" type="submit">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">暂无数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
