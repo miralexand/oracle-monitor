@@ -528,6 +528,14 @@ class Store(object):
             total = stats["total"] or 0
             healthy = (stats["ok_count"] or 0) + (stats["alert_count"] or 0)
             uptime = round(healthy / total * 100, 1) if total else None
+            active_count = sum(1 for row in active_rows if not row["ignored"])
+            ignored_count = sum(1 for row in active_rows if row["ignored"])
+            run_status = latest["status"] if latest else None
+            # 当所有告警均被忽略时，展示状态由“告警”回归“正常”
+            if run_status in ("alert", "error") and active_count == 0 and ignored_count > 0:
+                effective_status = "ok"
+            else:
+                effective_status = run_status
             result.append(
                 {
                     "id": db["id"],
@@ -537,7 +545,8 @@ class Store(object):
                     "service_name": db["service_name"],
                     "sid": db["sid"],
                     "enabled": bool(db["enabled"]),
-                    "latest_status": latest["status"] if latest else None,
+                    "latest_status": effective_status,
+                    "run_status": run_status,
                     "latest_time": latest["started_at"] if latest else None,
                     "latest_message": latest["message"] if latest else None,
                     "latest_duration_ms": latest["duration_ms"] if latest else None,
@@ -547,8 +556,8 @@ class Store(object):
                     "error_24h": stats["error_count"] or 0,
                     "avg_duration_ms": int(stats["avg_ms"]) if stats["avg_ms"] else None,
                     "uptime_24h": uptime,
-                    "active_alerts": sum(1 for row in active_rows if not row["ignored"]),
-                    "ignored_alerts": sum(1 for row in active_rows if row["ignored"]),
+                    "active_alerts": active_count,
+                    "ignored_alerts": ignored_count,
                     "active_alerts_list": [
                         {
                             "key": row["alert_key"],

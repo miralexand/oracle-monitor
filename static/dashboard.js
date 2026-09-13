@@ -48,7 +48,11 @@
     var s = db.latest_status;
     var ms = db.latest_duration_ms;
     if (s === "ok") {
-      return "运行状态良好" + (ms != null ? "，最近一次检测用时 <strong>" + ms + " 毫秒</strong>" : "") + "。";
+      var text = "运行状态良好" + (ms != null ? "，最近一次检测用时 <strong>" + ms + " 毫秒</strong>" : "") + "。";
+      if (db.ignored_alerts > 0) {
+        text += "（<strong>" + db.ignored_alerts + "</strong> 项告警已忽略）";
+      }
+      return text;
     }
     if (s === "alert") {
       if (db.active_alerts === 0 && db.ignored_alerts > 0) {
