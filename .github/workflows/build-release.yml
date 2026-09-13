@@ -57,8 +57,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
-          name: Oracle Monitor ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
-          generate_release_notes: true
+          name: Oracle 数据库监控 ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
           files: |
             dist/oracle_monitor.exe
             dist/oracle_monitor.exe.sha256

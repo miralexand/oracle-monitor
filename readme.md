@@ -608,6 +608,7 @@ pyinstaller --clean --noconfirm oracle_monitor.spec
 **自动构建与发布**：仓库内置 GitHub Actions 工作流
 `.github/workflows/build-release.yml`，推送 `v*` 标签会**自动构建 EXE 并发布到 GitHub Release**
 （附带 `oracle_monitor.exe` 与 `.sha256`）；也可在 Actions 页面手动触发。
+发布说明正文取自仓库根目录的 `RELEASE_NOTES.md`（中文），发布前请先更新该文件。
 
 **分发与首次运行**：只需把单个 `dist\oracle_monitor.exe` 拷贝给用户。
 首次运行会在 exe 同目录生成 `config.ini`，编辑后再次运行即可；日志 `logs\`
