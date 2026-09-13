@@ -2,6 +2,14 @@
 
 > 一个轻量级、跨平台的 Oracle 数据库健康监测工具。定时轮询数据库状态，异常时写入日志并通过 SMTP 邮件通知管理员。
 
+[![License: Mulan PubL v2](https://img.shields.io/badge/License-Mulan%20PubL%20v2-3f51b5.svg)](https://license.coscl.org.cn/MulanPubL-2.0)
+[![GitHub stars](https://img.shields.io/github/stars/miralexand/oracle-monitor?style=social)](https://github.com/miralexand/oracle-monitor/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/miralexand/oracle-monitor?style=social)](https://github.com/miralexand/oracle-monitor/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/miralexand/oracle-monitor)](https://github.com/miralexand/oracle-monitor/issues)
+[![Last commit](https://img.shields.io/github/last-commit/miralexand/oracle-monitor)](https://github.com/miralexand/oracle-monitor/commits/main)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://github.com/miralexand/oracle-monitor)
+
 ---
 
 ## 目录
@@ -21,6 +29,7 @@
 - [13. 打包与部署](#13-打包与部署)
 - [14. 敏感数据与安全](#14-敏感数据与安全)
 - [15. 许可证](#15-许可证)
+- [Star History](#star-history)
 
 ---
 
@@ -843,31 +852,34 @@ build/
 
 ## 15. 许可证
 
-本项目采用 **MIT License**，可自由用于商业与非商业场景。
+本项目采用 **木兰公共许可证，第2版（Mulan Public License, Version 2，Mulan PubL v2）** 开源。
 
+- 许可证全文：[LICENSE](LICENSE)
+- 官方地址：<https://license.coscl.org.cn/MulanPubL-2.0>
+
+> Mulan PubL v2 是一种**弱 copyleft（传染性）**许可证：您可以自由使用、修改、分发，
+> 但分发本软件或其"衍生作品"时，须以相同许可证提供**对应源代码**，并保留版权与免责声明。
+> 详见 `LICENSE` 全文（中英文双语，具同等法律效力，以中文版为准）。
+
+在源文件头部建议添加如下声明：
+
+```text
+Copyright (c) 2025 miralexand
+Oracle Monitor is licensed under Mulan PubL v2.
+You can use this software according to the terms and conditions of the Mulan PubL v2.
+You may obtain a copy of Mulan PubL v2 at:
+    http://license.coscl.org.cn/MulanPubL-2.0
+THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+See the Mulan PubL v2 for more details.
 ```
-MIT License
 
-Copyright (c) 2025 Your Name
+---
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Star History
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+[![Star History Chart](https://api.star-history.com/svg?repos=miralexand/oracle-monitor&type=Date)](https://star-history.com/#miralexand/oracle-monitor&Date)
 
 ---
 
