@@ -2,7 +2,7 @@
   "use strict";
 
   var C = window.Charts;
-  var state = { data: null, range: "24h", prevSummary: {}, first: true, signature: null };
+  var state = { data: null, range: "24h", prevSummary: {}, first: true, signature: null, filter: null };
   var ICONS = {
     total: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
     ok: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
@@ -43,6 +43,85 @@
     if (!el) return;
     if (animate) el.classList.remove("no-anim");
     else el.classList.add("no-anim");
+  }
+
+  var FILTERS = {
+    total: { label: "全部数据库", test: function () { return true; } },
+    ok: { label: "正常运行", test: function (db) { return db.latest_status === "ok"; } },
+    alert: { label: "存在告警", test: function (db) { return db.latest_status === "alert"; } },
+    error: { label: "连接失败", test: function (db) { return db.run_status === "error"; } },
+    connect: { label: "24h 连接异常", test: function (db) { return db.error_24h > 0; } },
+    active: { label: "活动告警", test: function (db) { return db.active_alerts > 0; } }
+  };
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function smoothScrollTo(el) {
+    if (!el) return;
+    var target = el.getBoundingClientRect().top + window.pageYOffset - 72;
+    var start = window.pageYOffset;
+    var dist = target - start;
+    if (Math.abs(dist) < 2) return;
+    var dur = Math.min(900, Math.max(360, Math.abs(dist) * 0.6));
+    var t0 = performance.now();
+    function step(now) {
+      var p = Math.min(1, (now - t0) / dur);
+      window.scrollTo(0, start + dist * easeInOutCubic(p));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function updateCardActive(key) {
+    document.querySelectorAll("#summary .stat-card").forEach(function (card) {
+      card.classList.toggle("active-filter", !!key && card.dataset.filter === key);
+    });
+  }
+
+  function updateFilterBar(key, count) {
+    var bar = document.getElementById("filter-bar");
+    if (!bar) return;
+    if (!key) {
+      bar.style.display = "none";
+      bar.innerHTML = "";
+      return;
+    }
+    bar.style.display = "flex";
+    bar.innerHTML =
+      '<span class="filter-chip">已筛选：' + C.esc(FILTERS[key].label) + "（" + count + "）" +
+      '<button type="button" title="清除筛选" aria-label="清除筛选">&times;</button></span>';
+    bar.querySelector("button").addEventListener("click", function () {
+      applyFilter(null, false);
+    });
+  }
+
+  function applyFilter(key, scroll) {
+    state.filter = key;
+    var cards = document.querySelectorAll("#db-list .db-card");
+    var map = {};
+    (state.data || []).forEach(function (db) { map[String(db.id)] = db; });
+    var count = 0;
+    var delay = 0;
+    cards.forEach(function (el) {
+      var db = map[el.dataset.dbId];
+      var show = !key || !db || FILTERS[key].test(db);
+      el.classList.toggle("filtered-out", !show);
+      el.classList.remove("filter-in");
+      if (show) {
+        if (key) {
+          void el.offsetWidth;
+          el.style.animationDelay = delay * 45 + "ms";
+          el.classList.add("filter-in");
+          delay++;
+        }
+        count++;
+      }
+    });
+    updateFilterBar(key, count);
+    updateCardActive(key);
+    if (scroll) smoothScrollTo(document.getElementById("db-section"));
   }
 
   function plainSummary(db) {
@@ -109,10 +188,10 @@
           "<span>24h 连接失败 <b>" + (summary.connect_failures_24h || 0) + "</b> 次</span>" +
           "<span>24h 告警 <b>" + (summary.alerts_24h || 0) + "</b> 次</span>" +
           (ignored ? "<span>已忽略 <b>" + ignored + "</b> 项</span>" : "") +
-          '<span class="ts ' + tsCls + '" title="' +
-            C.esc((timeSync && timeSync.server) || "") +
-            '">' + C.esc(timeSyncLabel(timeSync)) + "</span>" +
-          "<span>时区 <b>" + C.esc((timeSync && timeSync.timezone) || "UTC") + "</b></span>" +
+          '<a class="ts ' + tsCls + '" href="/settings" title="' +
+            C.esc((timeSync && timeSync.server) || "") + '">' + C.esc(timeSyncLabel(timeSync)) + "</a>" +
+          '<a class="ts muted" href="/settings" title="时间地区">时区 <b>' +
+            C.esc((timeSync && timeSync.timezone) || "UTC") + "</b></a>" +
         "</div></div>" +
       "</div>";
     C.playRings(el);
@@ -132,7 +211,8 @@
     ];
     var prev = state.prevSummary;
     el.innerHTML = cards.map(function (c, i) {
-      return '<div class="stat-card ' + c.cls + ' fade-up" style="animation-delay:' + i * 60 + 'ms">' +
+      return '<div class="stat-card clickable ' + c.cls + ' fade-up" data-filter="' + c.key +
+        '" title="点击筛选对应数据库" style="animation-delay:' + i * 60 + 'ms">' +
         '<span class="stat-icon">' + ICONS[c.key] + "</span>" +
         '<div class="num" data-key="' + c.key + '">' + (prev[c.key] == null ? 0 : prev[c.key]) + "</div>" +
         '<div class="label">' + c.label + "</div></div>";
@@ -215,7 +295,11 @@
       anomaly = '<span class="badge error" title="最近一次检测无法连接数据库（告警已忽略）"><i class="dot"></i>连接异常</span>';
     }
 
-    return '<article class="db-card ' + C.esc(status) + ' fade-up" style="animation-delay:' + (index * 80) + 'ms">' +
+    return '<article class="db-card clickable ' + C.esc(status) + ' fade-up" data-db-id="' + db.id +
+      '" style="animation-delay:' + (index * 80) + 'ms">' +
+      '<span class="card-jump" title="编辑该数据库">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>' +
+      "</span>" +
       '<div class="db-head">' +
         "<div><div class=\"db-name\">" + C.esc(db.name) + "</div>" +
         '<div class="db-conn">' + conn + (db.enabled ? "" : " · 已停用") + "</div></div>" +
@@ -259,6 +343,7 @@
     if (hint) hint.style.display = "none";
     list.innerHTML = data.map(renderDatabase).join("");
     C.playRings(list);
+    applyFilter(state.filter, false);
   }
 
   function updateMeta(payload) {
@@ -329,6 +414,25 @@
             loadDashboard();
           })
           .catch(function () { btn.disabled = false; });
+      });
+    }
+
+    var summary = document.getElementById("summary");
+    if (summary) {
+      summary.addEventListener("click", function (e) {
+        var card = e.target.closest(".stat-card");
+        if (!card || !card.dataset.filter) return;
+        var key = card.dataset.filter;
+        applyFilter(state.filter === key ? null : key, true);
+      });
+    }
+
+    if (list) {
+      list.addEventListener("click", function (e) {
+        if (e.target.closest(".alert-ignore") || e.target.closest("button") || e.target.closest("a")) return;
+        var card = e.target.closest(".db-card");
+        if (!card || !card.dataset.dbId) return;
+        window.location.href = "/databases?edit=" + encodeURIComponent(card.dataset.dbId);
       });
     }
 
