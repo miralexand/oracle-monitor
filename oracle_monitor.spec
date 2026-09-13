@@ -10,7 +10,7 @@ datas = [("config.sample.ini", ".")]
 binaries = []
 hiddenimports = []
 
-for package in ("oracledb", "cryptography", "cffi"):
+for package in ("oracledb", "cryptography", "cffi", "tzdata"):
     package_datas, package_binaries, package_hiddenimports = collect_all(package)
     datas += package_datas
     binaries += package_binaries

@@ -1,0 +1,64 @@
+name: Build Windows EXE & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "发布标签（如 v1.2.0）；留空则仅构建并上传 Artifact"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build single-file EXE
+        run: pyinstaller --clean --noconfirm oracle_monitor.spec
+
+      - name: Generate SHA256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 "dist\oracle_monitor.exe").Hash.ToLower()
+          "$hash  oracle_monitor.exe" | Out-File -Encoding ascii "dist\oracle_monitor.exe.sha256"
+          Get-Content "dist\oracle_monitor.exe.sha256"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle_monitor-windows-x64
+          path: |
+            dist/oracle_monitor.exe
+            dist/oracle_monitor.exe.sha256
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        if: github.ref_type == 'tag' || inputs.version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          name: Oracle Monitor ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/oracle_monitor.exe
+            dist/oracle_monitor.exe.sha256

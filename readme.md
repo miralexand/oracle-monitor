@@ -9,6 +9,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/miralexand/oracle-monitor)](https://github.com/miralexand/oracle-monitor/commits/main)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://github.com/miralexand/oracle-monitor)
+[![Build Windows EXE](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml/badge.svg)](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml)
 
 ---
 
