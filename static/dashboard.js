@@ -124,6 +124,30 @@
     if (scroll) smoothScrollTo(document.getElementById("db-section"));
   }
 
+  function openChartModal(name, points) {
+    var modal = document.getElementById("chart-modal");
+    if (!modal) return;
+    var body = document.getElementById("chart-modal-body");
+    var title = document.getElementById("chart-modal-title");
+    if (title) title.textContent = (name ? name + " · " : "") + "响应时间（24 小时，毫秒）";
+    if (body) {
+      body.innerHTML = points && points.length
+        ? C.line(points, { width: 920, height: 380 })
+        : '<p class="modal-empty">暂无数据</p>';
+    }
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeChartModal() {
+    var modal = document.getElementById("chart-modal");
+    if (!modal || !modal.classList.contains("open")) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
   function plainSummary(db) {
     var s = db.latest_status;
     var ms = db.latest_duration_ms;
@@ -267,6 +291,7 @@
     var status = db.latest_status || "unknown";
     var conn = C.esc(db.host) + ":" + C.esc(db.port) + "/" + C.esc(db.service_name || db.sid || "-");
     var avg = db.avg_duration_ms == null ? "-" : db.avg_duration_ms + "ms";
+    var rtPoints = (db.hourly || []).map(function (h) { return { label: h.hour, value: h.avg_ms }; });
 
     var canManage = !!window.IS_ADMIN;
     var alertItems = db.active_alerts_list || [];
@@ -320,8 +345,10 @@
           '<div>最近检测时间<b title="' + C.esc(fmtTime(db.latest_time)) + '">' + C.esc(timeAgo(db.latest_time)) + "</b></div>" +
         "</div>" +
       "</div>" +
-      '<div class="chart-block"><div class="block-title"><span>响应时间（24 小时）</span><span>毫秒</span></div>' +
-        C.line((db.hourly || []).map(function (h) { return { label: h.hour, value: h.avg_ms }; })) +
+      '<div class="chart-block"><div class="block-title"><span>响应时间（24 小时）</span><span>毫秒 · 点击放大</span></div>' +
+        '<div class="chart-clickable" data-db="' + C.esc(db.name) + '" data-points="' + C.esc(JSON.stringify(rtPoints)) + '" title="点击放大查看">' +
+          C.line(rtPoints) +
+        "</div>" +
       "</div>" +
       '<div class="chart-block"><div class="block-title"><span>最近检测记录</span>' +
         '<span class="legend"><span><i class="ok"></i>正常</span><span><i class="alert"></i>告警</span><span><i class="error"></i>失败</span></span>' +
@@ -429,12 +456,29 @@
 
     if (list) {
       list.addEventListener("click", function (e) {
-        if (e.target.closest(".alert-ignore") || e.target.closest("button") || e.target.closest("a")) return;
+        if (e.target.closest(".alert-ignore") || e.target.closest("button") || e.target.closest("a") || e.target.closest(".chart-clickable")) return;
         var card = e.target.closest(".db-card");
         if (!card || !card.dataset.dbId) return;
         window.location.href = "/databases?edit=" + encodeURIComponent(card.dataset.dbId);
       });
     }
+
+    document.addEventListener("click", function (e) {
+      var chart = e.target.closest(".chart-clickable");
+      if (chart) {
+        var points = [];
+        try { points = JSON.parse(chart.dataset.points || "[]"); } catch (err) { points = []; }
+        openChartModal(chart.dataset.db || "", points);
+        return;
+      }
+      if (e.target.closest("[data-close]") || e.target.closest("#chart-modal-close")) {
+        closeChartModal();
+      }
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeChartModal();
+    });
 
     var tabs = document.getElementById("trend-tabs");
     if (tabs) {

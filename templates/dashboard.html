@@ -47,6 +47,17 @@
     还没有配置数据库，前往 <a href="{{ url_for('databases_page') }}">数据库管理</a> 添加。
   </p>
 </section>
+
+<div id="chart-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3 id="chart-modal-title">响应时间</h3>
+      <button type="button" id="chart-modal-close" class="modal-close" aria-label="关闭">&times;</button>
+    </div>
+    <div id="chart-modal-body" class="modal-body"></div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>window.PAGE = 'dashboard'; window.IS_ADMIN = {{ 'true' if is_admin else 'false' }};</script>
