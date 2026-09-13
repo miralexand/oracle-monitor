@@ -11,6 +11,12 @@
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://github.com/miralexand/oracle-monitor)
 [![Build Windows EXE](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml/badge.svg)](https://github.com/miralexand/oracle-monitor/actions/workflows/build-release.yml)
 
+## 界面预览
+
+![Oracle 数据库监控面板](docs/%E7%9B%91%E6%8E%A7%E9%9D%A2%E6%9D%BF.png)
+
+> Web 管理面板：整体健康状态、各库可用率环形图、响应时间曲线、24h/7d 告警趋势等，详见 [13.3 Docker 部署](#133-docker-部署web-管理面板推荐)。
+
 ---
 
 ## 目录
