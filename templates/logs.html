@@ -53,14 +53,16 @@
   </form>
 </section>
 
-<section class="cards">
+<section class="cards" id="log-cards">
   {% for level in all_levels %}
-  <div class="stat-card {{ level_cls[level] }}">
+  <div class="stat-card clickable {{ level_cls[level] }}{% if filters.levels == [level] %} active-filter{% endif %}"
+       data-level="{{ level }}" title="点击仅查看 {{ level }} 日志">
     <div class="num">{{ counts[level] }}</div>
     <div class="label">{{ level }}</div>
   </div>
   {% endfor %}
-  <div class="stat-card accent">
+  <div class="stat-card clickable accent{% if filters.levels|length == all_levels|length %} active-filter{% endif %}"
+       data-level="" title="显示全部级别">
     <div class="num">{{ total }}</div>
     <div class="label">筛选结果</div>
   </div>

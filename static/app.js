@@ -138,10 +138,28 @@
     });
   }
 
+  function bindLogCards() {
+    var wrap = document.getElementById("log-cards");
+    if (!wrap) return;
+    wrap.addEventListener("click", function (e) {
+      var card = e.target.closest(".stat-card");
+      if (!card) return;
+      var level = card.dataset.level || "";
+      var params = new URLSearchParams(window.location.search);
+      params.delete("levels");
+      if (level && !card.classList.contains("active-filter")) {
+        params.append("levels", level);
+      }
+      var qs = params.toString();
+      window.location.href = window.location.pathname + (qs ? "?" + qs : "");
+    });
+  }
+
   initTheme();
 
   document.addEventListener("DOMContentLoaded", function () {
     bindPasswordHash();
     bindButtons();
+    bindLogCards();
   });
 })();
